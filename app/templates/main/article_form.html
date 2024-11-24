@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{% if article %}Edit Article{% else %}New Article{% endif %}{% endblock %}
+
+{% block head %}
+<script src="https://cdn.tiny.cloud/1/{{ config['TINYMCE_API_KEY'] }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+        selector: '#content',
+        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'Author name',
+        mergetags_list: [
+            { value: 'First.Name', title: 'First Name' },
+            { value: 'Email', title: 'Email' },
+        ],
+        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject("See docs to implement AI Assistant")),
+        setup: function(editor) {
+            editor.on('change', function() {
+                editor.save();
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>{% if article %}Edit Article{% else %}New Article{% endif %}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <form method="POST" action="" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                {{ form.title.label(class="form-label") }}
+                                {{ form.title(class="form-control") }}
+                                {% for error in form.title.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.content.label(class="form-label") }}
+                                {{ form.content(class="form-control", rows="10", id="content") }}
+                                {% for error in form.content.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.summary.label(class="form-label") }}
+                                {{ form.summary(class="form-control", rows="3") }}
+                                {% for error in form.summary.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Article Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                {{ form.category.label(class="form-label") }}
+                                {{ form.category(class="form-select") }}
+                                {% for error in form.category.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.tags.label(class="form-label") }}
+                                {{ form.tags(class="form-select", multiple="multiple") }}
+                                {% for error in form.tags.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% if article and article.featured_image %}
+                            <div class="mb-3">
+                                <img src="{{ url_for('static', filename='uploads/' + article.featured_image) }}" class="img-fluid mb-2">
+                            </div>
+                            {% endif %}
+                            <div class="mb-3">
+                                {{ form.featured_image.label(class="form-label") }}
+                                {{ form.featured_image(class="form-control") }}
+                                {% for error in form.featured_image.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Save Article</button>
+                        {% if article and article.status == 'in_progress' %}
+                        <button type="button" class="btn btn-success submit-for-review">Submit for Review</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for tags
+    $('.form-select[multiple]').select2({
+        placeholder: 'Select tags',
+        allowClear: true
+    });
+
+    // Submit for review button handler
+    $('.submit-for-review').click(function() {
+        if (confirm('Are you sure you want to submit this article for review?')) {
+            const articleId = {{ article.id if article else 'null' }};
+            fetch(`/articles/${articleId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: 'ready_for_review'
+                })
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = "{{ url_for('main.article_list') }}";
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

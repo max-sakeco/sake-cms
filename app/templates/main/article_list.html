@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Articles{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Articles</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('main.create_article_view') }}" class="btn btn-primary">New Article</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col">
+        <form class="row g-3" method="GET">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="search" placeholder="Search articles..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="in_progress" {% if request.args.get('status') == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="ready_for_review" {% if request.args.get('status') == 'ready_for_review' %}selected{% endif %}>Ready for Review</option>
+                    <option value="published" {% if request.args.get('status') == 'published' %}selected{% endif %}>Published</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if request.args.get('category')|int == category.id %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in articles.items %}
+                    <tr>
+                        <td>{{ article.title }}</td>
+                        <td>{{ article.category.name if article.category else '-' }}</td>
+                        <td><span class="badge bg-{{ status_colors[article.status] }}">{{ article.status|replace('_', ' ')|title }}</span></td>
+                        <td>{{ article.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <a href="{{ url_for('main.edit_article_view', id=article.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            {% if article.status == 'in_progress' %}
+                            <button class="btn btn-sm btn-success submit-for-review" data-article-id="{{ article.id }}">Submit for Review</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">No articles found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if articles.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% for page in range(1, articles.pages + 1) %}
+                <li class="page-item {% if page == articles.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.article_list', page=page, **request.args) }}">{{ page }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('.submit-for-review').click(function() {
+        const articleId = $(this).data('article-id');
+        if (confirm('Are you sure you want to submit this article for review?')) {
+            fetch(`/articles/${articleId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: 'ready_for_review'
+                })
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
