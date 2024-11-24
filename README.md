@@ -10,6 +10,7 @@ A modern Content Management System built with Flask, featuring article managemen
 - Category and Tag Support
 - File Upload Support
 - Review System for Articles
+- RESTful API for Content Access
 
 ## Requirements
 
@@ -23,7 +24,7 @@ A modern Content Management System built with Flask, featuring article managemen
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/sake-cms.git
+git clone https://github.com/max-sakeco/sake-cms.git
 cd sake-cms
 ```
 
@@ -54,6 +55,75 @@ The application will be available at `http://localhost:5001`
 
 - Email: admin@example.com
 - Password: admin123
+
+## API Documentation
+
+The CMS provides a RESTful API to access content:
+
+### List Articles
+```
+GET /api/articles
+```
+Query parameters:
+- page: Page number (default: 1)
+- per_page: Items per page (default: 10)
+- category: Filter by category slug
+- tag: Filter by tag slug
+- search: Search in title and content
+
+### Get Single Article
+```
+GET /api/articles/<slug>
+```
+
+### List Categories
+```
+GET /api/categories
+```
+
+### List Tags
+```
+GET /api/tags
+```
+
+Example API response for articles:
+```json
+{
+    "items": [
+        {
+            "id": 1,
+            "title": "Article Title",
+            "slug": "article-title",
+            "summary": "Article summary",
+            "content": "Full content",
+            "featured_image": "image.jpg",
+            "published_at": "2023-11-24T18:30:00",
+            "category": {
+                "id": 1,
+                "name": "Technology",
+                "slug": "technology"
+            },
+            "tags": [
+                {
+                    "id": 1,
+                    "name": "Python",
+                    "slug": "python"
+                }
+            ],
+            "author": {
+                "id": 1,
+                "username": "admin"
+            }
+        }
+    ],
+    "meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_pages": 5,
+        "total_items": 42
+    }
+}
+```
 
 ## Configuration
 
