@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}User Management{% endblock %}
+{% block title %}Category Management{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>User Management</h1>
-        <a href="{{ url_for('auth.add_user') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add User
+        <h1>Category Management</h1>
+        <a href="{{ url_for('main.add_category') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Category
         </a>
     </div>
 
@@ -17,26 +17,26 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Articles</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {% for category in categories %}
                         <tr>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.role.name }}</td>
+                            <td>{{ category.name }}</td>
+                            <td>{{ category.description or 'No description' }}</td>
+                            <td>{{ category.articles|length }}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('auth.edit_user', id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{{ url_for('main.edit_category', id=category.id) }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
-                                    {% if user.id != current_user.id %}
-                                    <form action="{{ url_for('auth.delete_user', id=user.id) }}" method="POST" class="d-inline" 
-                                          onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    {% if not category.articles %}
+                                    <form action="{{ url_for('main.delete_category', id=category.id) }}" method="POST" class="d-inline" 
+                                          onsubmit="return confirm('Are you sure you want to delete this category?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>

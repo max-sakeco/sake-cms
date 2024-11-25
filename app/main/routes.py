@@ -1,4 +1,4 @@
-from flask import jsonify, request, current_app, render_template, redirect, url_for, flash
+from flask import render_template, flash, redirect, url_for, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.main import bp
@@ -7,7 +7,8 @@ from app.main.utils import save_image, allowed_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
-from app.main.forms import ArticleForm
+from app.main.forms import ArticleForm, CategoryForm
+from slugify import slugify
 
 @bp.route('/')
 @login_required
@@ -205,3 +206,131 @@ def review_articles():
     
     articles = Article.query.filter_by(status='ready_for_review').order_by(Article.created_at.desc()).all()
     return render_template('main/review_articles.html', articles=articles)
+
+@bp.route('/categories')
+@login_required
+def category_list():
+    categories = Category.query.order_by(Category.name).all()
+    return render_template('main/category_list.html', categories=categories)
+
+@bp.route('/categories/add', methods=['GET', 'POST'])
+@login_required
+def add_category():
+    form = CategoryForm()
+    if form.validate_on_submit():
+        category = Category(
+            name=form.name.data,
+            description=form.description.data,
+            slug=slugify(form.name.data)
+        )
+        db.session.add(category)
+        db.session.commit()
+        flash('Category created successfully.', 'success')
+        return redirect(url_for('main.category_list'))
+    return render_template('main/category_form.html', form=form, title='Add Category')
+
+@bp.route('/categories/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_category(id):
+    category = Category.query.get_or_404(id)
+    form = CategoryForm(obj=category)
+    form._category_id = id
+    
+    if form.validate_on_submit():
+        category.name = form.name.data
+        category.description = form.description.data
+        category.slug = slugify(form.name.data)
+        db.session.commit()
+        flash('Category updated successfully.', 'success')
+        return redirect(url_for('main.category_list'))
+    return render_template('main/category_form.html', form=form, title='Edit Category')
+
+@bp.route('/categories/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_category(id):
+    category = Category.query.get_or_404(id)
+    if category.articles:
+        flash('Cannot delete category that has articles.', 'danger')
+    else:
+        db.session.delete(category)
+        db.session.commit()
+        flash('Category deleted successfully.', 'success')
+    return redirect(url_for('main.category_list'))
+
+@bp.route('/settings/categories')
+@login_required
+def settings_category_list():
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('main.index'))
+    categories = Category.query.order_by(Category.name).all()
+    return render_template('main/category_list.html', categories=categories)
+
+@bp.route('/settings/categories/add', methods=['GET', 'POST'])
+@login_required
+def settings_add_category():
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    form = CategoryForm()
+    if form.validate_on_submit():
+        category = Category(name=form.name.data)
+        category.description = form.description.data
+        db.session.add(category)
+        try:
+            db.session.commit()
+            flash('Category added successfully.', 'success')
+            return redirect(url_for('main.settings_category_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding category.', 'danger')
+    
+    return render_template('main/category_form.html', form=form, title='Add Category')
+
+@bp.route('/settings/categories/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def settings_edit_category(id):
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    category = Category.query.get_or_404(id)
+    form = CategoryForm(obj=category)
+    form._category_id = category.id
+    
+    if form.validate_on_submit():
+        category.name = form.name.data
+        category.description = form.description.data
+        category.slug = slugify(form.name.data)
+        try:
+            db.session.commit()
+            flash('Category updated successfully.', 'success')
+            return redirect(url_for('main.settings_category_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating category.', 'danger')
+    
+    return render_template('main/category_form.html', form=form, title='Edit Category')
+
+@bp.route('/settings/categories/<int:id>/delete', methods=['POST'])
+@login_required
+def settings_delete_category(id):
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    category = Category.query.get_or_404(id)
+    if category.articles.count() > 0:
+        flash('Cannot delete category. It still has articles associated with it.', 'danger')
+        return redirect(url_for('main.settings_category_list'))
+    
+    try:
+        db.session.delete(category)
+        db.session.commit()
+        flash('Category deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting category.', 'danger')
+    
+    return redirect(url_for('main.settings_category_list'))

@@ -52,7 +52,7 @@ def logout():
 @login_required
 def user_list():
     if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.')
+        flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('main.index'))
     users = User.query.all()
     return render_template('auth/user_list.html', users=users)
@@ -61,7 +61,7 @@ def user_list():
 @login_required
 def add_user():
     if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.')
+        flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('main.index'))
     
     form = UserForm()
@@ -77,11 +77,11 @@ def add_user():
         db.session.add(user)
         try:
             db.session.commit()
-            flash('User added successfully.')
+            flash('User added successfully.', 'success')
             return redirect(url_for('auth.user_list'))
         except Exception as e:
             db.session.rollback()
-            flash('Error adding user. Email might already be registered.')
+            flash('Error adding user. Email might already be registered.', 'danger')
     
     return render_template('auth/user_form.html', form=form, title='Add User')
 
@@ -89,7 +89,7 @@ def add_user():
 @login_required
 def edit_user(id):
     if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.')
+        flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(id)
@@ -100,16 +100,17 @@ def edit_user(id):
         user.username = form.username.data
         user.email = form.email.data
         user.role_id = form.role.data
+        
         if form.password.data:
             user.set_password(form.password.data)
         
         try:
             db.session.commit()
-            flash('User updated successfully.')
+            flash('User updated successfully.', 'success')
             return redirect(url_for('auth.user_list'))
         except Exception as e:
             db.session.rollback()
-            flash('Error updating user. Email might already be registered.')
+            flash('Error updating user. Email might already be registered.', 'danger')
     
     return render_template('auth/user_form.html', form=form, title='Edit User')
 
@@ -117,18 +118,20 @@ def edit_user(id):
 @login_required
 def delete_user(id):
     if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.')
+        flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('main.index'))
     
-    if current_user.id == id:
-        flash('You cannot delete your own account.')
+    user = User.query.get_or_404(id)
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('auth.user_list'))
     
-    user = User.query.get_or_404(id)
     try:
         db.session.delete(user)
         db.session.commit()
-        flash('User deleted successfully.')
+        flash('User deleted successfully.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Error deleting user.')
+        flash('Error deleting user.', 'danger')
+    
+    return redirect(url_for('auth.user_list'))
